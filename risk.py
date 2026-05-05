@@ -20,25 +20,27 @@ if "api_ready" not in st.session_state:
 with st.sidebar:
     st.title("⚙️ 設定 & マスター定義")
 
-    # 1. 接続モードの選択
+# 1. 接続モードの選択
     mode = st.radio("接続モード", ["Gemini (Cloud)", "LM Studio (Local)"])
 
     if mode == "Gemini (Cloud)":
-        env_key = os.getenv("GOOGLE_API_KEY")
-        api_key = st.text_input("Google API Key", value=env_key if env_key else "", type="password")
+        # シークレットから取得した値を初期値(value)としてセット。パスワード形式で表示。
+        api_key = st.text_input("Google API Key", value=secret_key, type="password")
+        
         if api_key:
             genai.configure(api_key=api_key)
             st.success("Gemini 準備完了")
             st.session_state.api_ready = True
         else:
-            st.warning("API Keyを入力してください")
+            st.warning("APIキーが未設定です。Secretsに登録するか、直接入力してください。")
             st.session_state.api_ready = False
+            
     else:
-        # RTX 5070環境などを想定したローカル接続
+        # LM Studio 等のローカル接続設定（RTX 5070環境などを想定）
         local_url = st.text_input("LM Studio URL", "http://localhost:1234/v1")
-        st.info("LM StudioでServerを開始してください。")
+        st.info("LM StudioでServerを開始してください")
         try:
-            # client_local をセッション等で保持して右側で使う
+            # ローカル接続用のクライアントをセッションに保持
             st.session_state.client_local = OpenAI(base_url=local_url, api_key="lm-studio")
             st.success("Local Server 設定完了")
             st.session_state.api_ready = True
