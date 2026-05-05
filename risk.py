@@ -16,7 +16,7 @@ if "ai_highlights" not in st.session_state:
 if "api_ready" not in st.session_state:
     st.session_state.api_ready = False
 
-# --- 修正版：UIにAPIキーを出さない安全な構成 ---
+# --- API設定---
 # バックエンド側でシークレットを取得
 secret_key = st.secrets.get("GOOGLE_API_KEY") or os.getenv("GOOGLE_API_KEY")
 
@@ -75,7 +75,7 @@ with st.sidebar:
     # 3. 要因マスター
     st.subheader("🔍 3. 要因マスター")
     factor_input = st.text_area("要因リスト（改行区切り）", 
-                                value="P: 患者の認知機能\nS: 手順書の解釈相違\nH: システムUI\nE: リソース不足\nL: 手順遵守の失念", 
+                                value="P: 患者の行動\nS: 手順書\nH: システム\nE: リソース不足\nL: 手順遵守の失念", 
                                 height=120)
     factor_options = [item.strip() for item in factor_input.split('\n') if item.strip()]
 
@@ -114,7 +114,7 @@ with col_left:
 # --- 右カラム：評価実行エリア ---
 with col_right:
     st.subheader("📝 リスク評価実行")
-    user_role = st.selectbox("評定者の職種を選択", ["CRA", "CRC", "DM", "PI", "その他"])
+    user_role = st.selectbox("評定者の職種を選択", ["CRA", "CRC", "DM", "PM", "PI", "STAT"])
     
     st.divider()
     
