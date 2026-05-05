@@ -34,27 +34,17 @@ with st.sidebar:
             st.warning("API Keyを入力してください")
             st.session_state.api_ready = False
     else:
-        # RTX 5070などのローカル環境用
+        # RTX 5070環境などを想定したローカル接続
         local_url = st.text_input("LM Studio URL", "http://localhost:1234/v1")
-        st.info("LM StudioでServerを開始してください")
+        st.info("LM StudioでServerを開始してください。")
         try:
+            # client_local をセッション等で保持して右側で使う
             st.session_state.client_local = OpenAI(base_url=local_url, api_key="lm-studio")
             st.success("Local Server 設定完了")
             st.session_state.api_ready = True
         except Exception as e:
             st.error(f"接続エラー: {e}")
             st.session_state.api_ready = False
-
-    st.divider()
-    # --- この後に 1. CTQ定義 / 2. リスク事象の特定 が続きます ---
-
-    else:
-        # RTX 5070環境などを想定したローカル接続
-        local_url = st.text_input("LM Studio URL", "http://localhost:1234/v1")
-        st.info("LM StudioでServerを開始してください。")
-        # client_local をセッション等で保持して右側で使う
-        st.session_state.client_local = OpenAI(base_url=local_url, api_key="lm-studio")
-        st.success("Local Server 設定完了")
 
     st.divider()
     # 1. CTQ定義
@@ -92,11 +82,10 @@ with st.sidebar:
 # --- メインエリア：2カラム ---
 col_left, col_right = st.columns([1.2, 1.8])
 
-# --- 左カラム：AI解析結果 & プロトコル参照（順序入れ替え） ---
+# --- 左カラム：AI解析結果 & プロトコル参照 ---
 with col_left:
     st.subheader("🤖 AI解析結果：該当箇所の特定")
     
-    # 【位置入れ替え】AI推論結果を最上部に配置
     if st.session_state.ai_highlights:
         for r_idx, h_text in st.session_state.ai_highlights.items():
             r_name_label = st.session_state.get(f"master_risk_{r_idx}", "Unknown")
@@ -108,7 +97,7 @@ with col_left:
 
     st.divider()
 
-    # プロトコル参照を下に配置
+    # プロトコル参照
     st.subheader("📜 プロトコル原本参照")
     uploaded_pdf = st.file_uploader("PDFをアップロード", type=["pdf"])
     if uploaded_pdf:
@@ -140,19 +129,28 @@ with col_right:
         with st.expander(f"No.{i} : {r_name} ({r_ctq})", expanded=(i==1)):
             st.markdown(f"**CTQ:** {r_ctq}")
             
-            # 解析ボタン（結果は左カラム上部に表示される）
             if st.button(f"🔍 この事象の根拠を左カラムに抽出", key=f"ai_btn_{i}"):
-                if not api_key:
+                if mode == "Gemini (Cloud)" and not api_key:
                     st.error("サイドバーでAPIキーを設定してください")
                 elif not st.session_state.protocol_text:
                     st.warning("左側でPRTをアップロードしてください")
                 else:
                     with st.spinner("プロトコルを解析中..."):
                         try:
-                            model = genai.GenerativeModel("gemini-3-flash-preview")
                             prompt = f"プロトコルから「{r_name}」に関連するセクションと規定を抽出し理由を述べてください。\n\nPRT:\n{st.session_state.protocol_text[:15000]}"
-                            response = model.generate_content(prompt)
-                            st.session_state.ai_highlights[i] = response.text
+                            
+                            if mode == "Gemini (Cloud)":
+                                model = genai.GenerativeModel("gemini-3-flash-preview")
+                                response = model.generate_content(prompt)
+                                result_text = response.text
+                            else:
+                                response = st.session_state.client_local.chat.completions.create(
+                                    model="local-model",
+                                    messages=[{"role": "user", "content": prompt}]
+                                )
+                                result_text = response.choices[0].message.content
+                                
+                            st.session_state.ai_highlights[i] = result_text
                             st.rerun()
                         except Exception as e:
                             st.error(f"解析失敗: {e}")
