@@ -3,6 +3,8 @@ import pandas as pd
 from io import BytesIO
 import PyPDF2
 import google.generativeai as genai
+from openai import OpenAI  # 追加
+import os  # 追加
 
 st.set_page_config(page_title="RBA Risk Assessment Pro", layout="wide")
 
@@ -11,18 +13,50 @@ if "protocol_text" not in st.session_state:
     st.session_state.protocol_text = ""
 if "ai_highlights" not in st.session_state:
     st.session_state.ai_highlights = {}
+if "api_ready" not in st.session_state:
+    st.session_state.api_ready = False
 
-# --- サイドバー：マスター定義（CTQ主導型） ---
+# --- サイドバー：設定エリア ---
 with st.sidebar:
-    st.title("⚙️ マスター設定")
-    
-    with st.expander("🔑 APIキー設定", expanded=False):
-        api_key = st.text_input("Google API Key", type="password")
+    st.title("⚙️ 設定 & マスター定義")
+
+    # 1. 接続モードの選択
+    mode = st.radio("接続モード", ["Gemini (Cloud)", "LM Studio (Local)"])
+
+    if mode == "Gemini (Cloud)":
+        env_key = os.getenv("GOOGLE_API_KEY")
+        api_key = st.text_input("Google API Key", value=env_key if env_key else "", type="password")
         if api_key:
             genai.configure(api_key=api_key)
+            st.success("Gemini 準備完了")
+            st.session_state.api_ready = True
+        else:
+            st.warning("API Keyを入力してください")
+            st.session_state.api_ready = False
+    else:
+        # RTX 5070などのローカル環境用
+        local_url = st.text_input("LM Studio URL", "http://localhost:1234/v1")
+        st.info("LM StudioでServerを開始してください")
+        try:
+            st.session_state.client_local = OpenAI(base_url=local_url, api_key="lm-studio")
+            st.success("Local Server 設定完了")
+            st.session_state.api_ready = True
+        except Exception as e:
+            st.error(f"接続エラー: {e}")
+            st.session_state.api_ready = False
 
     st.divider()
+    # --- この後に 1. CTQ定義 / 2. リスク事象の特定 が続きます ---
 
+    else:
+        # RTX 5070環境などを想定したローカル接続
+        local_url = st.text_input("LM Studio URL", "http://localhost:1234/v1")
+        st.info("LM StudioでServerを開始してください。")
+        # client_local をセッション等で保持して右側で使う
+        st.session_state.client_local = OpenAI(base_url=local_url, api_key="lm-studio")
+        st.success("Local Server 設定完了")
+
+    st.divider()
     # 1. CTQ定義
     st.subheader("🎯 1. CTQの定義")
     ctq_raw = st.text_area("CTQ（1行に1つ）", 
