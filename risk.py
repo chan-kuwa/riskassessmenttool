@@ -130,8 +130,9 @@ with col_right:
             st.markdown(f"**CTQ:** {r_ctq}")
             
             if st.button(f"🔍 この事象の根拠を左カラムに抽出", key=f"ai_btn_{i}"):
-                if mode == "Gemini (Cloud)" and not api_key:
-                    st.error("サイドバーでAPIキーを設定してください")
+                # 修正箇所：api_key 参照を st.session_state.api_ready に変更
+                if mode == "Gemini (Cloud)" and not st.session_state.api_ready:
+                    st.error("API認証が完了していません。Secretsの設定を確認してください。")
                 elif not st.session_state.protocol_text:
                     st.warning("左側でPRTをアップロードしてください")
                 else:
