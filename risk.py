@@ -16,35 +16,31 @@ if "ai_highlights" not in st.session_state:
 if "api_ready" not in st.session_state:
     st.session_state.api_ready = False
 
-# --- 修正済み：サイドバー設定エリア ---
+# --- 修正版：UIにAPIキーを出さない安全な構成 ---
+# バックエンド側でシークレットを取得
+secret_key = st.secrets.get("GOOGLE_API_KEY") or os.getenv("GOOGLE_API_KEY")
+
 with st.sidebar:
     st.title("⚙️ 設定 & マスター定義")
 
-    # シークレットの取得設定（行頭のスペースを4つに統一）
-    secret_key = st.secrets.get("GOOGLE_API_KEY") or os.getenv("GOOGLE_API_KEY") or ""
-
-    # 1. 接続モードの選択
     mode = st.radio("接続モード", ["Gemini (Cloud)", "LM Studio (Local)"])
 
     if mode == "Gemini (Cloud)":
-        # シークレットから取得した値を初期値(value)としてセット
-        api_key = st.text_input("Google API Key", value=secret_key, type="password")
-        
-        if api_key:
-            genai.configure(api_key=api_key)
-            st.success("Gemini 準備完了")
+        # シークレットの存在チェックと設定をバックエンドで完結させる
+        if secret_key:
+            genai.configure(api_key=secret_key)
+            st.success("✅ Gemini 認証済み (Cloud)")
             st.session_state.api_ready = True
         else:
-            st.warning("APIキーが未設定です。")
+            st.error("❌ APIキーがシステムに設定されていません。")
             st.session_state.api_ready = False
             
     else:
-        # LM Studio 等のローカル接続設定
+        # LM Studio 等のローカル接続（RTX 5070環境などを想定）
         local_url = st.text_input("LM Studio URL", "http://localhost:1234/v1")
-        st.info("LM StudioでServerを開始してください")
         try:
             st.session_state.client_local = OpenAI(base_url=local_url, api_key="lm-studio")
-            st.success("Local Server 設定完了")
+            st.success("✅ Local Server 接続完了")
             st.session_state.api_ready = True
         except Exception as e:
             st.error(f"接続エラー: {e}")
