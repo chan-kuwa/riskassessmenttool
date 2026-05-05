@@ -27,7 +27,8 @@ with st.sidebar:
     mode = st.radio("接続モード", ["Gemini (Cloud)", "LM Studio (Local)"])
 
     if mode == "Gemini (Cloud)":
-       
+        # シークレットから取得した値を初期値(value)としてセット
+        api_key = st.text_input("Google API Key", value=secret_key, type="password")
         
         if api_key:
             genai.configure(api_key=api_key)
