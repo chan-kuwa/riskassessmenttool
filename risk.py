@@ -19,7 +19,8 @@ if "api_ready" not in st.session_state:
 # --- サイドバー：設定エリア ---
 with st.sidebar:
     st.title("⚙️ 設定 & マスター定義")
-
+# --- 修正箇所：シークレットの取得設定 ---
+secret_key = st.secrets.get("GOOGLE_API_KEY") or os.getenv("GOOGLE_API_KEY") or ""
 # 1. 接続モードの選択
     mode = st.radio("接続モード", ["Gemini (Cloud)", "LM Studio (Local)"])
 
