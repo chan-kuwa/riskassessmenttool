@@ -74,7 +74,6 @@ with st.sidebar:
 
     # 3. 要因マスター
 st.subheader("🔍 3. 要因マスター")
-    st.subheader("🔍 3. 要因マスター")
 
 # 文字列をきれいに定義するための変数
 default_factors = (
