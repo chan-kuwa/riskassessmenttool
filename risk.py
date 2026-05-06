@@ -80,7 +80,7 @@ default_factors = (
     "..."
 )
 
-　　factor_input = st.text_area(
+factor_input = st.text_area(
     label="要因リスト（改行区切り）",
     value=default_factors,
     height=160
@@ -94,7 +94,7 @@ factor_options = [item.strip() for item in factor_input.split('\n') if item.stri
 
 
     # --- 修正箇所1：サイドバーで評価基準を自由記載できるように変更 ---
-    st.divider()
+st.divider()
     st.subheader("📊 評価基準の定義編集 (S/O/D)")
     st.caption("評価時にプルダウンに表示される内容を編集できます。")
     
