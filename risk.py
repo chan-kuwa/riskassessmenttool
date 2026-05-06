@@ -80,7 +80,7 @@ default_factors = (
     "..."
 )
 
-factor_input = st.text_area(
+　　factor_input = st.text_area(
     label="要因リスト（改行区切り）",
     value=default_factors,
     height=160
