@@ -75,7 +75,7 @@ with st.sidebar:
     # 3. 要因マスター
     st.subheader("🔍 3. 要因マスター")
     factor_input = st.text_area("要因リスト（改行区切り）", 
-                                value="P: 患者の行動\nS: 手順書\nH: システム\nE: リソース不足\nL: 手順遵守の失念", 
+                                value="P: 患者の行動が要因\nS: マニュアル、手順書が要因\nH: システムが要因\nE: リソース不足など環境要因\nL: 当事者の失念など"\nL: 治験関係者以外の病院関係者や患者家族の行動が要因", 
                                 height=120)
     factor_options = [item.strip() for item in factor_input.split('\n') if item.strip()]
 
@@ -85,19 +85,19 @@ with st.sidebar:
     st.caption("評価時にプルダウンに表示される内容を編集できます。")
     
     with st.expander("S: 影響度 (Severity) の定義"):
-        s_def_1 = st.text_input("スコア1 (低)", value="軽微 (影響なし)", key="s_def_1")
-        s_def_2 = st.text_input("スコア2 (中)", value="中等度 (手間)", key="s_def_2")
-        s_def_3 = st.text_input("スコア3 (高)", value="重大 (安全性に関わる)", key="s_def_3")
+        s_def_1 = st.text_input("スコア1 (低)", value="安全性／試験結果の信頼性／被験者保護への影響は軽微", key="s_def_1")
+        s_def_2 = st.text_input("スコア2 (中)", value="蓄積することで影響", key="s_def_2")
+        s_def_3 = st.text_input("スコア3 (高)", value="即時影響", key="s_def_3")
 
     with st.expander("O: 発生頻度 (Occurrence) の定義"):
-        o_def_1 = st.text_input("スコア1 (低)", value="稀 (起きない)", key="o_def_1")
-        o_def_2 = st.text_input("スコア2 (中)", value="時々 (予測内)", key="o_def_2")
-        o_def_3 = st.text_input("スコア3 (高)", value="頻繁 (繰り返す)", key="o_def_3")
+        o_def_1 = st.text_input("スコア1 (低)", value="ほとんど発生しない", key="o_def_1")
+        o_def_2 = st.text_input("スコア2 (中)", value="偶発的に発生", key="o_def_2")
+        o_def_3 = st.text_input("スコア3 (高)", value="繰り返して発生", key="o_def_3")
 
     with st.expander("D: 検出性 (Detectability) の定義"):
-        d_def_1 = st.text_input("スコア1 (高)", value="確実 (検出可能)", key="d_def_1")
-        d_def_2 = st.text_input("スコア2 (中)", value="可能性あり (検知可)", key="d_def_2")
-        d_def_3 = st.text_input("スコア3 (低)", value="困難 (逸脱まで不明)", key="d_def_3")
+        d_def_1 = st.text_input("スコア1 (高)", value="発生時に即時検出可能", key="d_def_1")
+        d_def_2 = st.text_input("スコア2 (中)", value="データで検出可能", key="d_def_2")
+        d_def_3 = st.text_input("スコア3 (低)", value="検出が困難／オンサイトモニタリングで検出可能", key="d_def_3")
     # ------------------------------------------------------------------
 
 # --- メインエリア：2カラム ---
