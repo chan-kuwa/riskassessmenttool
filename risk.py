@@ -91,8 +91,7 @@ factor_input = st.text_area(
 factor_options = [item.strip() for item in factor_input.split('\n') if item.strip()]
 
 
-factor_options = [item.strip() for item in factor_input.split('\n') if item.strip()]
-    factor_options = [item.strip() for item in factor_input.split('\n') if item.strip()]
+
 
     # --- 修正箇所1：サイドバーで評価基準を自由記載できるように変更 ---
     st.divider()
