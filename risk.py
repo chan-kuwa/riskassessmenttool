@@ -79,6 +79,18 @@ with st.sidebar:
                                 height=120)
     factor_options = [item.strip() for item in factor_input.split('\n') if item.strip()]
 
+    # --- 修正箇所1：サイドバーに評価基準の定義を追加 ---
+    st.divider()
+    st.subheader("📊 評価基準の定義 (S/O/D)")
+    st.markdown("""
+    | スコア | **S: 影響度** | **O: 発生頻度** | **D: 検出性** |
+    | :--- | :--- | :--- | :--- |
+    | **1: 低** | 軽微。影響なし。 | 稀。起きない。 | 確実。検出可能。 |
+    | **2: 中** | 中等度。手間。 | 時々。予測内。 | 可能性あり。検知可。 |
+    | **3: 高** | 重大。安全性に関わる。 | 頻繁。繰り返す。 | 困難。逸脱まで不明。 |
+    """)
+    # --------------------------------------------------
+
 # --- メインエリア：2カラム ---
 col_left, col_right = st.columns([1.2, 1.8])
 
@@ -158,16 +170,40 @@ with col_right:
 
             st.divider()
             
-            # 評価入力
-            d1, d2, d3, d4 = st.columns([0.8, 0.8, 0.8, 1.2])
+            # --- 修正箇所2：評価入力 (定義をプルダウンに併記し、計算ロジックを調整) ---
+            st.caption("プルダウン内で定義を確認してスコアを選択してください。")
+            d1, d2, d3, d4 = st.columns([1.2, 1.2, 1.2, 1.0]) # 幅を少し広げました
+            
             with d1:
-                s = st.selectbox("S", [1, 2, 3], key=f"s_{i}")
+                s_options = [
+                    "1: 軽微 (影響なし)",
+                    "2: 中等度 (手間)",
+                    "3: 重大 (安全性に関わる)"
+                ]
+                s_str = st.selectbox("S (影響度)", s_options, key=f"s_{i}")
+                s = int(s_str[0]) # 先頭の数字を取得
+
             with d2:
-                o = st.selectbox("O", [1, 2, 3], key=f"o_{i}")
+                o_options = [
+                    "1: 稀 (起きない)",
+                    "2: 時々 (予測内)",
+                    "3: 頻繁 (繰り返す)"
+                ]
+                o_str = st.selectbox("O (発生頻度)", o_options, key=f"o_{i}")
+                o = int(o_str[0])
+
             with d3:
-                d = st.selectbox("D", [1, 2, 3], key=f"d_{i}")
+                d_options = [
+                    "1: 確実 (検出可能)",
+                    "2: 可能性あり (検知可)",
+                    "3: 困難 (逸脱まで不明)"
+                ]
+                d_str = st.selectbox("D (検出性)", d_options, key=f"d_{i}")
+                d = int(d_str[0])
+            
             with d4:
                 st.metric("RPN", s * o * d)
+            # ------------------------------------------------------------------
             
             st.multiselect("要因の選択", options=factor_options, key=f"fact_{i}")
 
@@ -177,7 +213,17 @@ with col_right:
         results = []
         for risk in risk_data_master:
             i = risk["id"]
-            s_v, o_v, d_v = st.session_state[f"s_{i}"], st.session_state[f"o_{i}"], st.session_state[f"d_{i}"]
+            # --- 修正箇所3：集計時のデータ取得ロジックを調整 ---
+            # セッション状態には「数字: 定義文」の文字列が入っているため、先頭の数字を取り出す
+            s_str_v = st.session_state[f"s_{i}"]
+            o_str_v = st.session_state[f"o_{i}"]
+            d_str_v = st.session_state[f"d_{i}"]
+            
+            s_v = int(s_str_v[0])
+            o_v = int(o_str_v[0])
+            d_v = int(d_str_v[0])
+            # -----------------------------------------------
+            
             results.append({
                 "Role": user_role,
                 "No": i,
