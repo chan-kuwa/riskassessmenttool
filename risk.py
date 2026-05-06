@@ -36,7 +36,7 @@ with st.sidebar:
             st.session_state.api_ready = False
             
     else:
-        # LM Studio 等のローカル接続（RTX 5070環境などを想定）
+        # LM Studio 等のローカル接続
         local_url = st.text_input("LM Studio URL", "http://localhost:1234/v1")
         try:
             st.session_state.client_local = OpenAI(base_url=local_url, api_key="lm-studio")
@@ -73,15 +73,24 @@ with st.sidebar:
     st.divider()
 
     # 3. 要因マスター
+st.subheader("🔍 3. 要因マスター")
     st.subheader("🔍 3. 要因マスター")
-    factor_input = st.text_area("要因リスト（改行区切り）", 
-                               "P: 患者の行動が要因\n"
-        "S: マニュアル、手順書が要因\n"
-        "H: システムが要因\n"
-        "E: リソース不足など環境要因\n"
-        "L: 当事者の失念など\n"
-        "L: 治験関係者以外の病院関係者や患者家族の行動が要因"
-                                height=120)
+
+# 文字列をきれいに定義するための変数
+default_factors = (
+    "P: 患者の行動が要因\n"
+    "S: マニュアル、手順書が要因\n"
+    "H: システムが要因\n"
+    "E: リソース不足など環境要因\n"
+    "L: 当事者の失念など\n"
+    "L: 治験関係者以外の病院関係者や患者家族の行動が要因"
+)
+
+factor_input = st.text_area(
+    label="要因リスト（改行区切り）",
+    value=default_factors,
+    height=160  # 6行あるので少し高めに設定
+)
     factor_options = [item.strip() for item in factor_input.split('\n') if item.strip()]
 
     # --- 修正箇所1：サイドバーで評価基準を自由記載できるように変更 ---
