@@ -73,30 +73,29 @@ with st.sidebar:
     st.divider()
 
     # 3. 要因マスター
-st.subheader("🔍 3. 要因マスター")
+    st.subheader("🔍 3. 要因マスター")
 
-default_factors = (
-    "P: 患者の行動が要因\n"
-    "..."
-)
+    default_factors = (
+        "P: 患者の行動が要因\n"
+        "S: マニュアル、手順書が要因\n"
+        "H: システムが要因\n"
+        "E: リソース不足など環境要因\n"
+        "L: 当事者の失念など\n"
+        "L: 治験関係者以外の病院関係者や患者家族の行動が要因"
+    )
 
-factor_input = st.text_area(
-    label="要因リスト（改行区切り）",
-    value=default_factors,
-    height=160
-)
+    factor_input = st.text_area(
+        label="要因リスト（改行区切り）",
+        value=default_factors,
+        height=160
+    )
 
-# ❌ ここがズレている可能性が高いです！
-# 93行目のこの行の先頭にある「スペース」を、上の factor_input と同じ数にしてください。
-factor_options = [item.strip() for item in factor_input.split('\n') if item.strip()]
-
-
-
+    factor_options = [item.strip() for item in factor_input.split('\n') if item.strip()]
 
     # --- 修正箇所1：サイドバーで評価基準を自由記載できるように変更 ---
-st.divider()
-st.subheader("📊 評価基準の定義編集 (S/O/D)")
-st.caption("評価時にプルダウンに表示される内容を編集できます。")
+    st.divider()
+    st.subheader("📊 評価基準の定義編集 (S/O/D)")
+    st.caption("評価時にプルダウンに表示される内容を編集できます。")
     
     with st.expander("S: 影響度 (Severity) の定義"):
         s_def_1 = st.text_input("スコア1 (低)", value="安全性／試験結果の信頼性／被験者保護への影響は軽微", key="s_def_1")
