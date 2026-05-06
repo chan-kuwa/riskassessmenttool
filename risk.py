@@ -75,21 +75,19 @@ with st.sidebar:
     # 3. 要因マスター
 st.subheader("🔍 3. 要因マスター")
 
-# 文字列をきれいに定義するための変数
 default_factors = (
     "P: 患者の行動が要因\n"
-    "S: マニュアル、手順書が要因\n"
-    "H: システムが要因\n"
-    "E: リソース不足など環境要因\n"
-    "L: 当事者の失念など\n"
-    "L: 治験関係者以外の病院関係者や患者家族の行動が要因"
+    "..."
 )
 
 factor_input = st.text_area(
     label="要因リスト（改行区切り）",
     value=default_factors,
-    height=160  # 6行あるので少し高めに設定
+    height=160
 )
+
+
+factor_options = [item.strip() for item in factor_input.split('\n') if item.strip()]
     factor_options = [item.strip() for item in factor_input.split('\n') if item.strip()]
 
     # --- 修正箇所1：サイドバーで評価基準を自由記載できるように変更 ---
