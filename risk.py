@@ -75,7 +75,7 @@ with st.sidebar:
     # 3. 要因マスター
     st.subheader("🔍 3. 要因マスター")
     factor_input = st.text_area("要因リスト（改行区切り）", 
-                                value="P: 患者の行動が要因\nS: マニュアル、手順書が要因\nH: システムが要因\nE: リソース不足など環境要因\nL: 当事者の失念など"\nL: 治験関係者以外の病院関係者や患者家族の行動が要因", 
+                                value="P: 患者の行動が要因\nS: マニュアル、手順書が要因\nH: システムが要因\nE: リソース不足など環境要因\nL: 当事者の失念など\nL: 治験関係者以外の病院関係者や患者家族の行動が要因", "
                                 height=120)
     factor_options = [item.strip() for item in factor_input.split('\n') if item.strip()]
 
