@@ -95,8 +95,8 @@ factor_options = [item.strip() for item in factor_input.split('\n') if item.stri
 
     # --- 修正箇所1：サイドバーで評価基準を自由記載できるように変更 ---
 st.divider()
-    st.subheader("📊 評価基準の定義編集 (S/O/D)")
-    st.caption("評価時にプルダウンに表示される内容を編集できます。")
+st.subheader("📊 評価基準の定義編集 (S/O/D)")
+st.caption("評価時にプルダウンに表示される内容を編集できます。")
     
     with st.expander("S: 影響度 (Severity) の定義"):
         s_def_1 = st.text_input("スコア1 (低)", value="安全性／試験結果の信頼性／被験者保護への影響は軽微", key="s_def_1")
