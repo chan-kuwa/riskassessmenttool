@@ -172,7 +172,7 @@ with col_right:
                 else:
                     with st.spinner("プロトコルを解析中..."):
                         try:
-                            prompt = f"プロトコルから「{r_name}」に関連するセクションと規定を抽出し理由を述べてください。\n\nPRT:\n{st.session_state.protocol_text[:15000]}"
+                            prompt = f"プロトコルから「{r_name}」に関連するセクションと規定を抽出すること。その際はセクション番号とページ数を記載し、規定は推論を加えず原文を忠実に記述すること。また理由を簡潔述べてください。\n\nPRT:\n{st.session_state.protocol_text[:15000]}"
                             
                             if mode == "Gemini (Cloud)":
                                 model = genai.GenerativeModel("gemini-3-flash-preview")
