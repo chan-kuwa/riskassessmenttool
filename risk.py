@@ -86,6 +86,10 @@ factor_input = st.text_area(
     height=160
 )
 
+# ❌ ここがズレている可能性が高いです！
+# 93行目のこの行の先頭にある「スペース」を、上の factor_input と同じ数にしてください。
+factor_options = [item.strip() for item in factor_input.split('\n') if item.strip()]
+
 
 factor_options = [item.strip() for item in factor_input.split('\n') if item.strip()]
     factor_options = [item.strip() for item in factor_input.split('\n') if item.strip()]
