@@ -79,17 +79,26 @@ with st.sidebar:
                                 height=120)
     factor_options = [item.strip() for item in factor_input.split('\n') if item.strip()]
 
-    # --- 修正箇所1：サイドバーに評価基準の定義を追加 ---
+    # --- 修正箇所1：サイドバーで評価基準を自由記載できるように変更 ---
     st.divider()
-    st.subheader("📊 評価基準の定義 (S/O/D)")
-    st.markdown("""
-    | スコア | **S: 影響度** | **O: 発生頻度** | **D: 検出性** |
-    | :--- | :--- | :--- | :--- |
-    | **1: 低** | 軽微 | 稀。 | 即時に検出可能。 |
-    | **2: 中** | 蓄積することで影響 | 偶発的に発生しうる。 | データで検出可能 |
-    | **3: 高** | 即時に影響 | 繰り返して発生しうる。 | 訪問SDVで検出可能。あるいは検出困難。 |
-    """)
-    # --------------------------------------------------
+    st.subheader("📊 評価基準の定義編集 (S/O/D)")
+    st.caption("評価時にプルダウンに表示される内容を編集できます。")
+    
+    with st.expander("S: 影響度 (Severity) の定義"):
+        s_def_1 = st.text_input("スコア1 (低)", value="軽微 (影響なし)", key="s_def_1")
+        s_def_2 = st.text_input("スコア2 (中)", value="中等度 (手間)", key="s_def_2")
+        s_def_3 = st.text_input("スコア3 (高)", value="重大 (安全性に関わる)", key="s_def_3")
+
+    with st.expander("O: 発生頻度 (Occurrence) の定義"):
+        o_def_1 = st.text_input("スコア1 (低)", value="稀 (起きない)", key="o_def_1")
+        o_def_2 = st.text_input("スコア2 (中)", value="時々 (予測内)", key="o_def_2")
+        o_def_3 = st.text_input("スコア3 (高)", value="頻繁 (繰り返す)", key="o_def_3")
+
+    with st.expander("D: 検出性 (Detectability) の定義"):
+        d_def_1 = st.text_input("スコア1 (高)", value="確実 (検出可能)", key="d_def_1")
+        d_def_2 = st.text_input("スコア2 (中)", value="可能性あり (検知可)", key="d_def_2")
+        d_def_3 = st.text_input("スコア3 (低)", value="困難 (逸脱まで不明)", key="d_def_3")
+    # ------------------------------------------------------------------
 
 # --- メインエリア：2カラム ---
 col_left, col_right = st.columns([1.2, 1.8])
@@ -170,33 +179,34 @@ with col_right:
 
             st.divider()
             
-            # --- 修正箇所2：評価入力 (定義をプルダウンに併記し、計算ロジックを調整) ---
+            # --- 修正箇所2：サイドバーで定義した内容が反映されるように変更 ---
             st.caption("プルダウン内で定義を確認してスコアを選択してください。")
             d1, d2, d3, d4 = st.columns([1.2, 1.2, 1.2, 1.0]) # 幅を少し広げました
             
             with d1:
+                # サイドバーの入力値を使って選択肢を動的に生成
                 s_options = [
-                    "1: 軽微 (影響なし)",
-                    "2: 中等度 (手間)",
-                    "3: 重大 (安全性に関わる)"
+                    f"1: {s_def_1}",
+                    f"2: {s_def_2}",
+                    f"3: {s_def_3}"
                 ]
                 s_str = st.selectbox("S (影響度)", s_options, key=f"s_{i}")
                 s = int(s_str[0]) # 先頭の数字を取得
 
             with d2:
                 o_options = [
-                    "1: 稀 (起きない)",
-                    "2: 時々 (予測内)",
-                    "3: 頻繁 (繰り返す)"
+                    f"1: {o_def_1}",
+                    f"2: {o_def_2}",
+                    f"3: {o_def_3}"
                 ]
                 o_str = st.selectbox("O (発生頻度)", o_options, key=f"o_{i}")
                 o = int(o_str[0])
 
             with d3:
                 d_options = [
-                    "1: 確実 (検出可能)",
-                    "2: 可能性あり (検知可)",
-                    "3: 困難 (逸脱まで不明)"
+                    f"1: {d_def_1}",
+                    f"2: {d_def_2}",
+                    f"3: {d_def_3}"
                 ]
                 d_str = st.selectbox("D (検出性)", d_options, key=f"d_{i}")
                 d = int(d_str[0])
@@ -213,8 +223,7 @@ with col_right:
         results = []
         for risk in risk_data_master:
             i = risk["id"]
-            # --- 修正箇所3：集計時のデータ取得ロジックを調整 ---
-            # セッション状態には「数字: 定義文」の文字列が入っているため、先頭の数字を取り出す
+            # セッション状態には「数字: [自由記載の定義]」の文字列が入っているため、先頭の数字を取り出す
             s_str_v = st.session_state[f"s_{i}"]
             o_str_v = st.session_state[f"o_{i}"]
             d_str_v = st.session_state[f"d_{i}"]
@@ -222,7 +231,6 @@ with col_right:
             s_v = int(s_str_v[0])
             o_v = int(o_str_v[0])
             d_v = int(d_str_v[0])
-            # -----------------------------------------------
             
             results.append({
                 "Role": user_role,
