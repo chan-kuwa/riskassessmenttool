@@ -8,24 +8,32 @@ import os
 
 import streamlit as st
 
-# --- ページ設定 (元のコード) ---
-st.set_page_config(page_title="RBA Risk Assessment Pro", layout="wide")
+# --- 1. ページ設定 (ブラウザのタブに関わる設定) ---
+# page_icon に画像ファイルを指定することで、タブにアイコンが表示されます
+st.set_page_config(
+    page_title="RBA Risk Assessment Pro", 
+    page_icon="riskass.png",  # ここでタブのアイコンを指定
+    layout="wide"
+)
 
-
-# --- ヘッダーエリア (タイトルと画像の配置) ---
-
-# --- タイトル部分をカラムで分割 ---
-# [0.1, 0.9] の比率でロゴとタイトルを並べる
-col_logo, col_title = st.columns([0.1, 0.9])
+# --- 2. ヘッダー表示 (画面内のロゴとタイトルの配置) ---
+# vertical_alignment="center" で画像と文字の高さを揃え、
+# gap="small" でアイコンとタイトルの距離を詰め、比率 [0.1, 0.9] で左寄せにします
+col_logo, col_title = st.columns([0.1, 0.9], vertical_alignment="center", gap="small")
 
 with col_logo:
-    
-    st.image("riskass.png", width=60)
+    # 画像がない場合のエラーを防ぐための try-except
+    try:
+        st.image("riskass.png", width=60)
+    except FileNotFoundError:
+        st.info("Logo")
 
 with col_title:
-    # タイトルを表示
-    st.title("Risk Assessment Tool Pro")
-# --- アプリのメインコンテンツをここから下に記述 ---
+    # st.title のままだと上の余白が大きいため、
+    # 余白（margin）をゼロにした st.markdown を使うとアイコンと高さがピッタリ合います
+    st.markdown("<h1 style='margin:0;'>Risk Assessment Tool Pro</h1>", unsafe_allow_html=True)
+
+# 区切り線
 st.write("---")
 st.write("ここにリスクアセスメントのツール本体を実装していきます。")
 
