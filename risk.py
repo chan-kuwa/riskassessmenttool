@@ -128,11 +128,16 @@ with col_left:
 # --- 右カラム：評価実行エリア ---
 with col_right:
     st.subheader("📝 リスク評価実行")
-    # 職種リストの設定
-    role_list = ["PI", "CRC", "DM", "CRA", "STAT", "カスタム"]
-    selected_role = st.selectbox("評定者の職種を選択", role_list)
-    if selected_role == "カスタム":
-        user_role = st.text_input("役割の詳細を入力", "その他")
+    # --- 修正後の職種・役割設定セクション ---
+    st.subheader("📝 リスク評価実行")
+    
+    # ベースとなる職種を選択
+    role_base = st.selectbox("評定者のベース職種を選択", ["PI", "CRC", "DM", "CRA", "STAT", "その他"])
+    
+    # 選択した職種を初期値として、自由に編集・追記できる入力欄を表示
+    user_role = st.text_input("役割の詳細（自由に編集・記載してください）", value=role_base)
+    
+    
     else:
         user_role = selected_role
     
