@@ -195,36 +195,48 @@ with col_right:
 
     # 集計出力・エクスポート
     st.divider()
-    if st.button("📊 評価レポートを生成"):
+   # --- 集計出力・エクスポート（ここから差し替え） ---
+    st.divider()
+    
+    # keyを追加して重複エラーを回避
+    if st.button("📊 評価レポートを生成", key="btn_generate_report"):
         results = []
+        # テキストレポート用のヘッダー
         full_text_report = f"--- RBA Risk Assessment Report ({user_role}) ---\n\n"
-        # --- 評価アプリ側の修正：列名を小文字に統一 ---
-if st.button("📊 評価レポートを生成"):
-    results = []
-    for risk in risk_data_master:
-        i = risk["id"]
-        # セッションからスコアを取得
-        s_v = int(st.session_state[f"s_{i}"][0])
-        o_v = int(st.session_state[f"o_{i}"][0])
-        d_v = int(st.session_state[f"d_{i}"][0])
-        factors = " | ".join(st.session_state[f"fact_{i}"])
         
-        # キーをすべて「小文字」に設定
-        results.append({
-            "role": user_role,        # Role -> role
-            "no": i,                  # No -> no
-            "ctq": risk["ctq"],       # CTQ -> ctq
-            "risk_event": risk["name"], # Risk_Event -> risk_event
-            "s": s_v,                 # S -> s
-            "o": o_v,                 # O -> o
-            "d": d_v,                 # D -> d
-            "rpn": s_v * o_v * d_v,   # RPN -> rpn
-            "factors": factors        # Factors -> factors
-        })
+        for risk in risk_data_master:
+            i = risk["id"]
+            # セッションからスコアを取得（インデックス0の数字を取得）
+            s_v = int(st.session_state[f"s_{i}"][0])
+            o_v = int(st.session_state[f"o_{i}"][0])
+            d_v = int(st.session_state[f"d_{i}"][0])
+            factors = " | ".join(st.session_state[f"fact_{i}"])
+            
+            # 分析アプリの仕様に合わせてキーをすべて「小文字」に設定
+            results.append({
+                "role": user_role,
+                "no": i,
+                "ctq": risk["ctq"],
+                "risk_event": risk["name"],
+                "s": s_v,
+                "o": o_v,
+                "d": d_v,
+                "rpn": s_v * o_v * d_v,
+                "factors": factors
+            })
 
-    if results:
-        df = pd.DataFrame(results)
-        st.table(df)
-        csv = df.to_csv(index=False).encode('utf-8-sig')
-        # ファイル名も小文字ベースで
-        st.download_button("📥 CSVダウンロード", csv, f"risk_eval_{user_role}.csv", "text/csv")
+            # テキストレポート用の詳細も蓄積
+            if i in st.session_state.ai_highlights:
+                full_text_report += f"【Risk {i}: {risk['name']}】\nRPN: {s_v*o_v*d_v}\n要因: {factors}\nAI抽出根拠:\n{st.session_state.ai_highlights[i]}\n\n"
+
+        if results:
+            df = pd.DataFrame(results)
+            st.table(df)
+            
+            # ダウンロードボタンを横並びに配置
+            ex_col1, ex_col2 = st.columns(2)
+            with ex_col1:
+                csv = df.to_csv(index=False).encode('utf-8-sig')
+                st.download_button("📥 CSVダウンロード", csv, f"risk_eval_{user_role}.csv", "text/csv")
+            with ex_col2:
+                st.download_button("📝 根拠付きレポート(TXT)", full_text_report, f"full_report_{user_role}.txt", "text/plain")
