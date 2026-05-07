@@ -127,7 +127,7 @@ with col_left:
 
 # --- 右カラム：評価実行エリア ---
 with col_right:
-    st.subheader("📝 リスク評価実行")
+    
     # --- 修正後の職種・役割設定セクション ---
     st.subheader("📝 リスク評価実行")
     
