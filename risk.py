@@ -213,16 +213,17 @@ with col_right:
             factors = " | ".join(st.session_state[f"fact_{i}"])
             
             # 分析アプリの仕様に合わせてキーをすべて「小文字」に設定
+            # 分析アプリのコードと100%整合させるためのキー構成
             results.append({
-                "role": user_role,
-                "no": i,
+                "role": user_role,        # 小文字
+                "risk_event": risk["name"], # 小文字
+                "S": s_v,                 # 66行目のために大文字
+                "O": o_v,                 # 66行目のために大文字
+                "D": d_v,                 # 66行目のために大文字
                 "ctq": risk["ctq"],
-                "risk_event": risk["name"],
-                "s": s_v,
-                "o": o_v,
-                "d": d_v,
-                "rpn": s_v * o_v * d_v,
+                "no": i,
                 "factors": factors
+            
             })
 
             # テキストレポート用の詳細も蓄積
