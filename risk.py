@@ -136,8 +136,6 @@ with col_right:
     
     # 選択した職種を初期値として、自由に編集・追記できる入力欄を表示
     user_role = st.text_input("役割の詳細（自由に編集・記載してください）", value=role_base)
-    
-    
     else:
         user_role = selected_role
     
