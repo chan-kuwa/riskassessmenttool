@@ -227,7 +227,7 @@ with col_right:
 
             # テキストレポート用の詳細も蓄積
             if i in st.session_state.ai_highlights:
-                full_text_report += f"【Risk {i}: {risk['name']}】\nRPN: {s_v*o_v*d_v}\n要因: {factors}\nAI抽出根拠:\n{st.session_state.ai_highlights[i]}\n\n"
+                full_text_report += f"【Risk {i}: {risk['name']}】\nRPN: {S_v*O_v*D_v}\n要因: {factors}\nAI抽出根拠:\n{st.session_state.ai_highlights[i]}\n\n"
 
         if results:
             df = pd.DataFrame(results)
