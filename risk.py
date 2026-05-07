@@ -198,27 +198,33 @@ with col_right:
     if st.button("📊 評価レポートを生成"):
         results = []
         full_text_report = f"--- RBA Risk Assessment Report ({user_role}) ---\n\n"
-        for risk in risk_data_master:
-            i = risk["id"]
-            s_v = int(st.session_state[f"s_{i}"][0])
-            o_v = int(st.session_state[f"o_{i}"][0])
-            d_v = int(st.session_state[f"d_{i}"][0])
-            factors = " | ".join(st.session_state[f"fact_{i}"])
-            
-            results.append({
-                "Role": user_role, "No": i, "CTQ": risk["ctq"], "Risk_Event": risk["name"],
-                "S": s_v, "O": o_v, "D": d_v, "RPN": s_v * o_v * d_v, "Factors": factors
-            })
-            
-            if i in st.session_state.ai_highlights:
-                full_text_report += f"【Risk {i}: {risk['name']}】\nRPN: {s_v*o_v*d_v}\n要因: {factors}\nAI抽出根拠:\n{st.session_state.ai_highlights[i]}\n\n"
+        # --- 評価アプリ側の修正：列名を小文字に統一 ---
+if st.button("📊 評価レポートを生成"):
+    results = []
+    for risk in risk_data_master:
+        i = risk["id"]
+        # セッションからスコアを取得
+        s_v = int(st.session_state[f"s_{i}"][0])
+        o_v = int(st.session_state[f"o_{i}"][0])
+        d_v = int(st.session_state[f"d_{i}"][0])
+        factors = " | ".join(st.session_state[f"fact_{i}"])
         
-        if results:
-            df = pd.DataFrame(results)
-            st.table(df)
-            ex_col1, ex_col2 = st.columns(2)
-            with ex_col1:
-                csv = df.to_csv(index=False).encode('utf-8-sig')
-                st.download_button("📥 CSVダウンロード", csv, f"risk_eval_{user_role}.csv", "text/csv")
-            with ex_col2:
-                st.download_button("📝 根拠付きレポート(TXT)", full_text_report, f"full_report_{user_role}.txt", "text/plain")
+        # キーをすべて「小文字」に設定
+        results.append({
+            "role": user_role,        # Role -> role
+            "no": i,                  # No -> no
+            "ctq": risk["ctq"],       # CTQ -> ctq
+            "risk_event": risk["name"], # Risk_Event -> risk_event
+            "s": s_v,                 # S -> s
+            "o": o_v,                 # O -> o
+            "d": d_v,                 # D -> d
+            "rpn": s_v * o_v * d_v,   # RPN -> rpn
+            "factors": factors        # Factors -> factors
+        })
+
+    if results:
+        df = pd.DataFrame(results)
+        st.table(df)
+        csv = df.to_csv(index=False).encode('utf-8-sig')
+        # ファイル名も小文字ベースで
+        st.download_button("📥 CSVダウンロード", csv, f"risk_eval_{user_role}.csv", "text/csv")
