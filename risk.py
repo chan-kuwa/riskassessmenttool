@@ -14,26 +14,17 @@ st.set_page_config(page_title="RBA Risk Assessment Pro", layout="wide")
 
 # --- ヘッダーエリア (タイトルと画像の配置) ---
 
-# 2つのカラムを作成します。
-# 最初のカラム(col1)を小さく(1)、2番目のカラム(col2)を大きく(10)設定して、
-# 画像をタイトルのすぐ左に寄せます。比率は好みに合わせて調整してください。
-col1, col2 = st.columns([0.6, 10])
+# --- タイトル部分をカラムで分割 ---
+# [0.1, 0.9] の比率でロゴとタイトルを並べる
+col_logo, col_title = st.columns([0.1, 0.9])
 
-with col1:
-    # タイトルの左側に画像を配置
-    # riskass.pngは、このPythonファイルと同じディレクトリに置く必要があります。
-    try:
-        st.image("riskass.png", width=60) # widthで画像の大きさを調整します
-    except FileNotFoundError:
-        # 画像が見つからない場合のフォールバック（デバッグ用）
-        st.warning("⚠️ riskass.png not found")
+with col_logo:
+    
+    st.image("riskass.png", width=60)
 
-with col2:
-    # メインのタイトルを配置
-    # 画像の高さと合わせるため、少しMarkdownで調整することもあります。
-    # ここでは単純にst.titleを使いますが、st.markdownでH1を使うとより細かく調整できます。
-    st.title("RBA Risk Assessment Pro")
-
+with col_title:
+    # タイトルを表示
+    st.title("Risk Assessment Tool Pro")
 # --- アプリのメインコンテンツをここから下に記述 ---
 st.write("---")
 st.write("ここにリスクアセスメントのツール本体を実装していきます。")
