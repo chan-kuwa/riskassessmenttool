@@ -17,7 +17,7 @@ st.set_page_config(page_title="RBA Risk Assessment Pro", layout="wide")
 # 2つのカラムを作成します。
 # 最初のカラム(col1)を小さく(1)、2番目のカラム(col2)を大きく(10)設定して、
 # 画像をタイトルのすぐ左に寄せます。比率は好みに合わせて調整してください。
-col1, col2 = st.columns([1, 10])
+col1, col2 = st.columns([0.6, 10])
 
 with col1:
     # タイトルの左側に画像を配置
