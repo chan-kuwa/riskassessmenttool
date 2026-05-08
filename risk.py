@@ -89,32 +89,27 @@ with st.sidebar:
         st.session_state.f_raw = f_raw
         factor_options = [f.strip() for f in f_raw.split('\n') if f.strip()]
 
-# API接続設定
-    st.divider()
-    mode = st.radio("Mode", ["Gemini", "Local"])
+# --- セキュアなAPI認証ロジック ---
+    st.subheader("🔑 API認証")
+    mode = st.radio("接続モード", ["Gemini", "Local"], label_visibility="collapsed")
     
     if mode == "Gemini":
-        # 1. まず Secrets や環境変数から取得を試みる
-        default_key = ""
-        try:
-            if "GOOGLE_API_KEY" in st.secrets:
-                default_key = st.secrets["GOOGLE_API_KEY"]
-        except:
-            pass
-        if not default_key:
-            default_key = os.getenv("GOOGLE_API_KEY", "")
-
-        # 2. 入力欄を表示（Secretsにあればそれが初期値になる）
-        key = st.text_input("Google API Key", value=default_key, type="password")
+        # Secretsから取得を試みるが、取得できても表示はしない
+        env_key = st.secrets.get("GOOGLE_API_KEY") or os.getenv("GOOGLE_API_KEY")
         
-        if key:
-            try:
-                genai.configure(api_key=key)
+        if env_key:
+            # Secretsにキーがある場合は、入力欄を表示せず「設定済み」とする
+            st.success("✅ APIキー：Secretsより読込済")
+            genai.configure(api_key=env_key)
+            st.session_state.api_ready = True
+        else:
+            # Secretsにない場合のみ、手動入力欄を出す（初期値は空）
+            user_key = st.text_input("Google API Key を入力", type="password")
+            if user_key:
+                genai.configure(api_key=user_key)
                 st.session_state.api_ready = True
-                if not default_key:
-                    st.success("✅ APIキーを認識しました")
-            except Exception as e:
-                st.error(f"認証エラー: {e}")
+    else:
+        st.session_state.api_ready = True
 
 # --- 5. メインエリア ヘッダー（ロゴとタイトル） ---
 # 画像がない場合に備え、絵文字とテキストでリッチに表示
