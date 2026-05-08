@@ -48,7 +48,6 @@ if "structured_risks" not in st.session_state:
 with st.sidebar:
     st.title("⚙️ RBA Master Control")
     
-    # 配布URL（APIキーを含まない安全なパッキング）
     if st.button("🔗 配布URLを発行"):
         current_config = {
             "roles": st.session_state.role_master.to_dict(orient='records'),
@@ -89,7 +88,6 @@ with st.sidebar:
 
     st.divider()
     
-    # --- セキュアなAPI認証ロジック ---
     st.subheader("🔑 API認証")
     mode = st.radio("接続モード", ["Gemini", "Local"], label_visibility="collapsed")
     
@@ -120,7 +118,6 @@ with head_col2:
 
 st.write("---")
 
-# 評価項目の展開
 eval_items = []
 for g in st.session_state.structured_risks:
     for e in g["events"].split('\n'):
@@ -156,23 +153,16 @@ with col_right:
                 if st.session_state.api_ready and st.session_state.protocol_text:
                     with st.spinner("解析中..."):
                         try:
-                            # プレビュー版として明示的に指定（3.0 Flash Preview）
-                            # SDKのバージョンによっては 'gemini-3-flash' だけで通らない場合、
-                            # 以下のプレビュー版フルネームを試す必要があります
-                            model = genai.GenerativeModel("models/gemini-3-flash")
-                            
+                            # プレビュー版モデル名を明示的に指定（3.0 Flash Preview）
+                            # 2026年現在のプレビュー用識別子 'gemini-3-flash-preview' を使用
+                            model = genai.GenerativeModel("models/gemini-3-flash-preview")
                             prompt = f"リスク「{item['risk']}」に関連するプロトコルの規定（セクション番号、ページ、原文）を抽出し、そのリスクをどう評価すべきか助言せよ。\n\nPROTOCOL:\n{st.session_state.protocol_text[:12000]}"
-                            
-                            res = model.generate_content(prompt)
-                            
-                            if res.text:
-                                st.session_state.ai_highlights[f"{item['ctq']}_{item['risk']}"] = res.text
-                                st.rerun()
+                            res = model.generate_content(prompt).text
+                            st.session_state.ai_highlights[f"{item['ctq']}_{item['risk']}"] = res
+                            st.rerun()
                         except Exception as e:
-                            # 404が出る場合は、API側でモデル名が一時的に 'gemini-3-flash-preview' 等に
-                            # なっている可能性があります。その場合はここを確認してください。
                             st.error(f"解析エラー: {e}")
-                            st.info("Flash Preview版のAPI利用権限を確認してください。")
+                            st.info("API Studioで利用可能なモデル名を確認してください（例: gemini-3-flash-preview-xxxx）")
             
             c1, c2, c3, c4 = st.columns([1,1,1,1])
             s = c1.selectbox("S (影響)", [1,2,3], key=f"s_{i}", help="1:低, 2:中, 3:高")
