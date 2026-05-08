@@ -156,7 +156,7 @@ with col_right:
                             # プレビュー版モデル名を明示的に指定（3.0 Flash Preview）
                             # 2026年現在のプレビュー用識別子 'gemini-3-flash-preview' を使用
                             model = genai.GenerativeModel("models/gemini-3-flash-preview")
-                            prompt = f"リスク「{item['risk']}」に関連するプロトコルの規定（セクション番号、ページ、原文）を抽出し、そのリスクをどう評価すべきか助言せよ。\n\nPROTOCOL:\n{st.session_state.protocol_text[:12000]}"
+                            prompt = f"リスク「{item['risk']}」に関連するプロトコルの規定（セクション番号、ページ、原文）を抽出せよ。\n\nPROTOCOL:\n{st.session_state.protocol_text[:12000]}"
                             res = model.generate_content(prompt).text
                             st.session_state.ai_highlights[f"{item['ctq']}_{item['risk']}"] = res
                             st.rerun()
