@@ -83,28 +83,23 @@ with st.sidebar:
         st.session_state.structured_risks = updated_risks
 
     with st.expander("🔍 3. 要因マスター", expanded=False):
-        # 文言を維持
         f_raw = st.text_area("要因", value="P: 患者要因\nS: 手順書要因\nH: システム要員\nE: リソース不足や時間等の環境要因\nL:対応者自身が要因（失念など）\nL: 治験関係者以外（分担医師・協力者以外の医療関係者や患者家族）要因", height=100)
         st.session_state.f_raw = f_raw
         factor_options = [f.strip() for f in f_raw.split('\n') if f.strip()]
 
     st.divider()
     
-    # --- セキュアなAPI認証ロジック（修正箇所） ---
+    # --- セキュアなAPI認証ロジック ---
     st.subheader("🔑 API認証")
     mode = st.radio("接続モード", ["Gemini", "Local"], label_visibility="collapsed")
     
     if mode == "Gemini":
-        # Secretsまたは環境変数から取得
         env_key = st.secrets.get("GOOGLE_API_KEY") or os.getenv("GOOGLE_API_KEY")
-        
         if env_key:
-            # Secretsにある場合は、値を表示せず成功メッセージのみ出す
             st.success("✅ APIキー：Secretsより読込済")
             genai.configure(api_key=env_key)
             st.session_state.api_ready = True
         else:
-            # Secretsにない場合のみ、手動入力（パスワード形式）を表示
             user_key = st.text_input("Google API Key を入力", type="password")
             if user_key:
                 genai.configure(api_key=user_key)
@@ -160,11 +155,15 @@ with col_right:
             if st.button(f"🔍 プロトコルから根拠を抽出", key=f"ai_b_{i}"):
                 if st.session_state.api_ready and st.session_state.protocol_text:
                     with st.spinner("解析中..."):
-                        prompt = f"リスク「{item['risk']}」に関連するプロトコルの規定（セクション番号、ページ、原文）を抽出し、そのリスクをどう評価すべきか助言せよ。\n\nPROTOCOL:\n{st.session_state.protocol_text[:12000]}"
-                        model = genai.GenerativeModel("gemini-1.5-flash")
-                        res = model.generate_content(prompt).text
-                        st.session_state.ai_highlights[f"{item['ctq']}_{item['risk']}"] = res
-                        st.rerun()
+                        try:
+                            # モデル名を gemini-3-flash に修正
+                            model = genai.GenerativeModel("gemini-3-flash")
+                            prompt = f"リスク「{item['risk']}」に関連するプロトコルの規定（セクション番号、ページ、原文）を抽出し、そのリスクをどう評価すべきか助言せよ。\n\nPROTOCOL:\n{st.session_state.protocol_text[:12000]}"
+                            res = model.generate_content(prompt).text
+                            st.session_state.ai_highlights[f"{item['ctq']}_{item['risk']}"] = res
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"解析エラー: {e}")
             
             c1, c2, c3, c4 = st.columns([1,1,1,1])
             s = c1.selectbox("S (影響)", [1,2,3], key=f"s_{i}", help="1:低, 2:中, 3:高")
