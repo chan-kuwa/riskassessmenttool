@@ -3,269 +3,182 @@ import pandas as pd
 from io import BytesIO
 import PyPDF2
 import google.generativeai as genai
-from openai import OpenAI
 import os
+import json
+import base64
 
-import streamlit as st
+# --- 1. ページ設定 ---
+st.set_page_config(page_title="RBA Risk Assessment Pro", layout="wide", page_icon="🛡️")
 
-# --- 1. ページ設定 (ブラウザのタブに関わる設定) ---
-# page_icon に画像ファイルを指定することで、タブにアイコンが表示されます
-st.set_page_config(
-    page_title="RBA Risk Assessment Pro", 
-    page_icon="riskass.png",  # ここでタブのアイコンを指定
-    layout="wide"
-)
-
-# --- 2. ヘッダー表示 (画面内のロゴとタイトルの配置) ---
-# vertical_alignment="center" で画像と文字の高さを揃え、
-# gap="small" でアイコンとタイトルの距離を詰め、比率 [0.1, 0.9] で左寄せにします
-col_logo, col_title = st.columns([0.1, 0.9], vertical_alignment="center", gap="small")
-
-with col_logo:
-    # 画像がない場合のエラーを防ぐための try-except
+# --- 2. URLパラメータ復元 ---
+query_params = st.query_params
+initial_config = None
+if "data" in query_params:
     try:
-        st.image("riskass.png", width=60)
-    except FileNotFoundError:
-        st.info("Logo")
+        initial_config = json.loads(base64.b64decode(query_params["data"]).decode('utf-8'))
+    except:
+        st.error("配布データの復元に失敗しました。")
 
-with col_title:
-    # st.title のままだと上の余白が大きいため、
-    # 余白（margin）をゼロにした st.markdown を使うとアイコンと高さがピッタリ合います
-    st.markdown("<h1 style='margin:0;'>Risk Assessment Tool Pro</h1>", unsafe_allow_html=True)
+# --- 3. セッション管理 ---
+if "protocol_text" not in st.session_state: st.session_state.protocol_text = ""
+if "ai_highlights" not in st.session_state: st.session_state.ai_highlights = {}
+if "api_ready" not in st.session_state: st.session_state.api_ready = False
 
-# 区切り線
-st.write("---")
-st.write("ここにリスクアセスメントのツール本体を実装していきます。")
+# マスターデータの初期化
+if "role_master" not in st.session_state:
+    if initial_config and "roles" in initial_config:
+        st.session_state.role_master = pd.DataFrame(initial_config["roles"])
+    else:
+        st.session_state.role_master = pd.DataFrame([
+            {"role": "PI", "definition": "検査および医学的評価の実施、妥当性・安全性の責任者"},
+            {"role": "CRC", "definition": "医師の支援、EDCデータ入力"},
+            {"role": "CRA", "definition": "規定遵守・データ信頼性の視点"}
+        ])
 
-# --- セッション状態の管理 ---
-if "protocol_text" not in st.session_state:
-    st.session_state.protocol_text = ""
-if "ai_highlights" not in st.session_state:
-    st.session_state.ai_highlights = {}
-if "api_ready" not in st.session_state:
-    st.session_state.api_ready = False
+if "structured_risks" not in st.session_state:
+    if initial_config and "risks" in initial_config:
+        st.session_state.structured_risks = initial_config["risks"]
+    else:
+        st.session_state.structured_risks = [
+            {"ctq": "主要評価項目の信頼性", "events": "画像データの欠測\n検査手順の逸脱"},
+            {"ctq": "被験者の安全性確保", "events": "有害事象の報告遅延"}
+        ]
 
-# --- API設定 (Secrets または 環境変数から取得) ---
-secret_key = st.secrets.get("GOOGLE_API_KEY") or os.getenv("GOOGLE_API_KEY")
-
+# --- 4. サイドバー（設定集約） ---
 with st.sidebar:
-    st.title("⚙️ 設定 & マスター定義")
+    st.title("⚙️ RBA Master Control")
+    
+    # 配布URL
+    if st.button("🔗 配布URLを発行"):
+        current_config = {
+            "roles": st.session_state.role_master.to_dict(orient='records'),
+            "risks": st.session_state.structured_risks,
+            "factors": st.session_state.get("f_raw", "")
+        }
+        b64 = base64.b64encode(json.dumps(current_config).encode('utf-8')).decode('utf-8')
+        # プレースホルダURL（実際のものに書き換えてください）
+        st.code(f"https://your-app-url.streamlit.app/?data={b64}")
+        st.caption("このURLをコピーして評価者に共有してください。")
 
-    mode = st.radio("接続モード", ["Gemini (Cloud)", "LM Studio (Local)"])
+    st.divider()
 
-    if mode == "Gemini (Cloud)":
-        if secret_key:
-            genai.configure(api_key=secret_key)
-            st.success("✅ Gemini 認証済み (Cloud)")
+    with st.expander("👤 1. 職種・役割の定義", expanded=False):
+        st.session_state.role_master = st.data_editor(st.session_state.role_master, num_rows="dynamic")
+        role_dict = dict(zip(st.session_state.role_master["role"], st.session_state.role_master["definition"]))
+
+    with st.expander("🎯 2. CTQ & リスク定義", expanded=True):
+        updated_risks = []
+        # リストを直接操作せず、一時的なリストで更新
+        current_groups = list(st.session_state.structured_risks)
+        for i, group in enumerate(current_groups):
+            st.markdown(f"**Group {i+1}**")
+            c_val = st.text_input(f"CTQ {i}", value=group["ctq"], key=f"c_in_{i}", label_visibility="collapsed")
+            e_val = st.text_area(f"Risk {i}", value=group["events"], key=f"e_in_{i}", height=80, label_visibility="collapsed")
+            updated_risks.append({"ctq": c_val, "events": e_val})
+            if st.button(f"🗑️ 削除", key=f"del_g_{i}"):
+                st.session_state.structured_risks.pop(i)
+                st.rerun()
+        
+        if st.button("➕ CTQを追加"):
+            st.session_state.structured_risks.append({"ctq": "", "events": ""})
+            st.rerun()
+        st.session_state.structured_risks = updated_risks
+
+    with st.expander("🔍 3. 要因マスター", expanded=False):
+        f_raw = st.text_area("要因", value="P: 患者要因\nS: 手順書要因\nH: システム要員\nE: リソース不足や時間等の環境要因\nL:対応者自身が要因（失念など）\nL: 治験関係者以外（分担医師・協力者以外の医療関係者や患者家族）要因", height=100)
+        st.session_state.f_raw = f_raw
+        factor_options = [f.strip() for f in f_raw.split('\n') if f.strip()]
+
+    st.divider()
+    mode = st.radio("Mode", ["Gemini", "Local"])
+    if mode == "Gemini":
+        key = st.text_input("API Key", type="password")
+        if key: 
+            genai.configure(api_key=key)
             st.session_state.api_ready = True
-        else:
-            st.error("❌ APIキーがシステムに設定されていません。")
-            st.session_state.api_ready = False
+
+# --- 5. メインエリア ヘッダー（ロゴとタイトル） ---
+# 画像がない場合に備え、絵文字とテキストでリッチに表示
+head_col1, head_col2 = st.columns([0.1, 0.9])
+with head_col1:
+    # riskass.png があれば表示、なければシールド絵文字を表示
+    if os.path.exists("riskass.png"):
+        st.image("riskass.png", width=70)
     else:
-        local_url = st.text_input("LM Studio URL", "http://localhost:1234/v1")
-        try:
-            st.session_state.client_local = OpenAI(base_url=local_url, api_key="lm-studio")
-            st.success("✅ Local Server 接続完了")
-            st.session_state.api_ready = True
-        except Exception as e:
-            st.error(f"接続エラー: {e}")
-            st.session_state.api_ready = False
+        st.markdown("<h1 style='text-align: center;'>🛡️</h1>", unsafe_allow_html=True)
+with head_col2:
+    st.markdown("<h1 style='margin-bottom: 0;'>Risk Structure Analyzer Pro</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='color: gray; margin-top: 0;'>Clinical Research Risk-Based Approach Support Tool</p>", unsafe_allow_html=True)
 
-    st.divider()
-    # 1. CTQ定義
-    st.subheader("🎯 1. CTQの定義")
-    ctq_raw = st.text_area("CTQ（1行に1つ）", 
-                           value="CTQ-1: 主要評価項目の信頼性\nCTQ-2: 被験者の安全性確保", 
-                           height=100)
-    ctq_list = [c.strip() for c in ctq_raw.split('\n') if c.strip()]
+st.write("---")
 
-    st.divider()
+# 評価項目の展開
+eval_items = []
+for g in st.session_state.structured_risks:
+    for e in g["events"].split('\n'):
+        if e.strip(): eval_items.append({"ctq": g["ctq"], "risk": e.strip()})
 
-    # 2. CTQごとのリスク特定
-    st.subheader("📝 2. リスク事象の特定")
-    risk_data_master = []
-    risk_count = 1
-    for ctq in ctq_list:
-        with st.expander(f"📌 {ctq} のリスク", expanded=True):
-            for j in range(3):
-                r_name = st.text_input(f"リスク事象 {risk_count}", key=f"master_risk_{risk_count}", placeholder="事象を入力")
-                if r_name:
-                    risk_data_master.append({"id": risk_count, "name": r_name, "ctq": ctq})
-                risk_count += 1
+col_left, col_right = st.columns([1, 1.5])
 
-    st.divider()
-
-    # 3. 要因マスター
-    st.subheader("🔍 3. 要因マスター")
-    default_factors = (
-        "P: 患者の行動が要因\n"
-        "S: マニュアル、手順書が要因\n"
-        "H: システムが要因\n"
-        "E: リソース不足など環境要因\n"
-        "L: 当事者の失念など\n"
-        "L: 治験関係者以外の病院関係者や患者家族の行動が要因"
-    )
-    factor_input = st.text_area(label="要因リスト", value=default_factors, height=160)
-    factor_options = [item.strip() for item in factor_input.split('\n') if item.strip()]
-
-    st.divider()
-    st.subheader("📊 評価基準の定義編集 (S/O/D)")
-    with st.expander("S: 影響度 (Severity)"):
-        s_def_1 = st.text_input("スコア1", value="安全性／信頼性への影響は軽微", key="s_def_1")
-        s_def_2 = st.text_input("スコア2", value="蓄積することで影響", key="s_def_2")
-        s_def_3 = st.text_input("スコア3", value="即時影響", key="s_def_3")
-
-    with st.expander("O: 発生頻度 (Occurrence)"):
-        o_def_1 = st.text_input("スコア1", value="ほとんど発生しない", key="o_def_1")
-        o_def_2 = st.text_input("スコア2", value="偶発的に発生", key="o_def_2")
-        o_def_3 = st.text_input("スコア3", value="繰り返して発生", key="o_def_3")
-
-    with st.expander("D: 検出性 (Detectability)"):
-        d_def_1 = st.text_input("スコア1", value="即時検出可能", key="d_def_1")
-        d_def_2 = st.text_input("スコア2", value="データで検出可能", key="d_def_2")
-        d_def_3 = st.text_input("スコア3", value="検出が困難", key="d_def_3")
-
-# --- メインエリア ---
-col_left, col_right = st.columns([1.2, 1.8])
-
-# --- 左カラム：AI解析結果 & プロトコル参照 ---
+# --- 6. 左カラム：解析根拠 ---
 with col_left:
-    st.subheader("🤖 AI解析結果：該当箇所の特定")
+    st.subheader("🤖 AI分析・原本確認")
+    up = st.file_uploader("プロトコル原本（PDF）", type="pdf")
+    if up:
+        reader = PyPDF2.PdfReader(BytesIO(up.read()))
+        st.session_state.protocol_text = "\n".join([p.extract_text() for p in reader.pages if p.extract_text()])
+    
     if st.session_state.ai_highlights:
-        for r_idx, h_text in st.session_state.ai_highlights.items():
-            r_name_label = st.session_state.get(f"master_risk_{r_idx}", "Unknown")
+        for k, v in st.session_state.ai_highlights.items():
             with st.chat_message("assistant"):
-                st.caption(f"Risk #{r_idx}: {r_name_label}")
-                st.write(h_text)
-    else:
-        st.info("右側の解析ボタンを押すと、ここに根拠規定が抽出されます。")
+                st.caption(f"【{k}】の抽出根拠")
+                st.write(v)
 
-    st.divider()
-    st.subheader("📜 プロトコル原本参照")
-    uploaded_pdf = st.file_uploader("PDFをアップロード", type=["pdf"])
-    if uploaded_pdf:
-        try:
-            pdf_reader = PyPDF2.PdfReader(BytesIO(uploaded_pdf.read()))
-            text = "\n".join([page.extract_text() for page in pdf_reader.pages if page.extract_text()])
-            st.session_state.protocol_text = text
-        except Exception as e:
-            st.error(f"Error: {e}")
-    if st.session_state.protocol_text:
-        st.text_area("PRT全文（確認用）", value=st.session_state.protocol_text, height=400, disabled=True)
-
-# --- 右カラム：評価実行エリア ---
+# --- 7. 右カラム：評価実行 ---
 with col_right:
-    
-    # --- 修正後の職種・役割設定セクション ---
-    st.subheader("📝 リスク評価実行")
-    
-    # ベースとなる職種を選択
-    role_base = st.selectbox("評定者のベース職種を選択", ["PI", "CRC", "DM", "CRA", "STAT", "その他"])
-    
-    # 選択した職種を初期値として、自由に編集・追記できる入力欄を表示
-    user_role = st.text_input("役割の詳細（自由に編集・記載してください）", value=role_base)
-    
-    
-    st.divider()
-    if not risk_data_master:
-        st.warning("サイドバーでCTQとリスク事象を入力してください。")
-    
-    for risk in risk_data_master:
-        i = risk["id"]
-        r_name = risk["name"]
-        r_ctq = risk["ctq"]
+    st.subheader("📝 評価スコアリング")
+    role_opts = list(role_dict.keys())
+    if role_opts:
+        sel_role = st.selectbox("あなたの職種を選択", role_opts)
+        st.info(f"**担当役割:** {role_dict[sel_role]}")
         
-        with st.expander(f"No.{i} : {r_name} ({r_ctq})", expanded=(i==1)):
-            st.markdown(f"**CTQ:** {r_ctq}")
-            if st.button(f"🔍 この事象の根拠を左カラムに抽出", key=f"ai_btn_{i}"):
-                if mode == "Gemini (Cloud)" and not st.session_state.api_ready:
-                    st.error("API認証が完了していません。")
-                elif not st.session_state.protocol_text:
-                    st.warning("左側でPRTをアップロードしてください")
-                else:
-                    with st.spinner("プロトコルを解析中..."):
-                        try:
-                            # 職種情報は含めず、解析の純度を保つ
-                            prompt = f"プロトコルから「{r_name}」に関連するセクションと規定を抽出すること。その際はセクション番号とページ数を記載し、規定は推論を加えず原文を忠実に記述すること。また理由を簡潔述べてください。\n\nPRT:\n{st.session_state.protocol_text[:15000]}"
-                            if mode == "Gemini (Cloud)":
-                                model = genai.GenerativeModel("gemini-1.5-flash")
-                                response = model.generate_content(prompt)
-                                result_text = response.text
-                            else:
-                                response = st.session_state.client_local.chat.completions.create(
-                                    model="local-model",
-                                    messages=[{"role": "user", "content": prompt}]
-                                )
-                                result_text = response.choices[0].message.content
-                            st.session_state.ai_highlights[i] = result_text
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"解析失敗: {e}")
+    for i, item in enumerate(eval_items):
+        with st.expander(f"No.{i+1} | {item['ctq']} : {item['risk']}", expanded=(i==0)):
+            if st.button(f"🔍 プロトコルから根拠を抽出", key=f"ai_b_{i}"):
+                if st.session_state.api_ready and st.session_state.protocol_text:
+                    with st.spinner("解析中..."):
+                        prompt = f"リスク「{item['risk']}」に関連するプロトコルの規定（セクション番号、ページ、原文）を抽出し、そのリスクをどう評価すべきか助言せよ。\n\nPROTOCOL:\n{st.session_state.protocol_text[:12000]}"
+                        model = genai.GenerativeModel("gemini-1.5-flash")
+                        res = model.generate_content(prompt).text
+                        st.session_state.ai_highlights[f"{item['ctq']}_{item['risk']}"] = res
+                        st.rerun()
+            
+            c1, c2, c3, c4 = st.columns([1,1,1,1])
+            s = c1.selectbox("S (影響)", [1,2,3], key=f"s_{i}", help="1:低, 2:中, 3:高")
+            o = c2.selectbox("O (頻度)", [1,2,3], key=f"o_{i}", help="1:低, 2:中, 3:高")
+            d = c3.selectbox("D (検出)", [1,2,3], key=f"d_{i}", help="1:容易, 2:困難, 3:極めて困難")
+            c4.metric("RPN", s*o*d)
+            st.multiselect("リスク要因 (Factors)", factor_options, key=f"f_{i}")
 
-            st.divider()
-            d1, d2, d3, d4 = st.columns([1.2, 1.2, 1.2, 1.0])
-            with d1:
-                s_options = [f"1: {s_def_1}", f"2: {s_def_2}", f"3: {s_def_3}"]
-                s_str = st.selectbox("S (影響度)", s_options, key=f"s_{i}")
-                s = int(s_str[0])
-            with d2:
-                o_options = [f"1: {o_def_1}", f"2: {o_def_2}", f"3: {o_def_3}"]
-                o_str = st.selectbox("O (発生頻度)", o_options, key=f"o_{i}")
-                o = int(o_str[0])
-            with d3:
-                d_options = [f"1: {d_def_1}", f"2: {d_def_2}", f"3: {d_def_3}"]
-                d_str = st.selectbox("D (検出性)", d_options, key=f"d_{i}")
-                d = int(d_str[0])
-            with d4:
-                st.metric("RPN", s * o * d)
-            
-            st.multiselect("要因の選択", options=factor_options, key=f"fact_{i}")
-
-    # 集計出力・エクスポート
     st.divider()
-   # --- 集計出力・エクスポート（ここから差し替え） ---
-    st.divider()
-    
-    # keyを追加して重複エラーを回避
-    if st.button("📊 評価レポートを生成", key="btn_generate_report"):
-        results = []
-        # テキストレポート用のヘッダー
-        full_text_report = f"--- RBA Risk Assessment Report ({user_role}) ---\n\n"
-        
-        for risk in risk_data_master:
-            i = risk["id"]
-            # セッションからスコアを取得（インデックス0の数字を取得）
-            s_v = int(st.session_state[f"s_{i}"][0])
-            o_v = int(st.session_state[f"o_{i}"][0])
-            d_v = int(st.session_state[f"d_{i}"][0])
-            factors = " | ".join(st.session_state[f"fact_{i}"])
-            
-            # 分析アプリの仕様に合わせてキーをすべて「小文字」に設定
-            # 分析アプリのコードと100%整合させるためのキー構成
-            results.append({
-                "role": user_role,        # 小文字
-                "risk_event": risk["name"], # 小文字
-                "S": s_v,                 # 66行目のために大文字
-                "O": o_v,                 # 66行目のために大文字
-                "D": d_v,                 # 66行目のために大文字
-                "ctq": risk["ctq"],
-                "no": i,
-                "factors": factors
-            
+    if st.button("📊 評価完了・CSV生成"):
+        final_data = []
+        for j, it in enumerate(eval_items):
+            final_data.append({
+                "role": sel_role,
+                "role_definition": role_dict[sel_role],
+                "ctq": it["ctq"],
+                "risk_event": it["risk"],
+                "S": st.session_state[f"s_{j}"],
+                "O": st.session_state[f"o_{j}"],
+                "D": st.session_state[f"d_{j}"],
+                "factors": " | ".join(st.session_state[f"f_{j}"])
             })
-
-            # テキストレポート用の詳細も蓄積
-            if i in st.session_state.ai_highlights:
-                full_text_report += f"【Risk {i}: {risk['name']}】\nRPN: {S_v*O_v*D_v}\n要因: {factors}\nAI抽出根拠:\n{st.session_state.ai_highlights[i]}\n\n"
-
-        if results:
-            df = pd.DataFrame(results)
-            st.table(df)
-            
-            # ダウンロードボタンを横並びに配置
-            ex_col1, ex_col2 = st.columns(2)
-            with ex_col1:
-                csv = df.to_csv(index=False).encode('utf-8-sig')
-                st.download_button("📥 CSVダウンロード", csv, f"risk_eval_{user_role}.csv", "text/csv")
-            with ex_col2:
-                st.download_button("📝 根拠付きレポート(TXT)", full_text_report, f"full_report_{user_role}.txt", "text/plain")
+        df = pd.DataFrame(final_data)
+        st.table(df)
+        st.download_button(
+            label="📥 分析ツール用CSVをダウンロード",
+            data=df.to_csv(index=False).encode('utf-8-sig'),
+            file_name=f"RBA_{sel_role}.csv",
+            mime="text/csv"
+        )
