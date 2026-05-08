@@ -48,7 +48,7 @@ if "structured_risks" not in st.session_state:
 with st.sidebar:
     st.title("⚙️ RBA Master Control")
     
-    # 配布URL
+    # 配布URL（APIキーを含まない安全なパッキング）
     if st.button("🔗 配布URLを発行"):
         current_config = {
             "roles": st.session_state.role_master.to_dict(orient='records'),
@@ -56,9 +56,8 @@ with st.sidebar:
             "factors": st.session_state.get("f_raw", "")
         }
         b64 = base64.b64encode(json.dumps(current_config).encode('utf-8')).decode('utf-8')
-        # プレースホルダURL（実際のものに書き換えてください）
         st.code(f"https://your-app-url.streamlit.app/?data={b64}")
-        st.caption("このURLをコピーして評価者に共有してください。")
+        st.caption("このURLをコピーして評価者に共有してください。※APIキーは含まれません。")
 
     st.divider()
 
@@ -68,7 +67,6 @@ with st.sidebar:
 
     with st.expander("🎯 2. CTQ & リスク定義", expanded=True):
         updated_risks = []
-        # リストを直接操作せず、一時的なリストで更新
         current_groups = list(st.session_state.structured_risks)
         for i, group in enumerate(current_groups):
             st.markdown(f"**Group {i+1}**")
@@ -85,25 +83,28 @@ with st.sidebar:
         st.session_state.structured_risks = updated_risks
 
     with st.expander("🔍 3. 要因マスター", expanded=False):
+        # 文言を維持
         f_raw = st.text_area("要因", value="P: 患者要因\nS: 手順書要因\nH: システム要員\nE: リソース不足や時間等の環境要因\nL:対応者自身が要因（失念など）\nL: 治験関係者以外（分担医師・協力者以外の医療関係者や患者家族）要因", height=100)
         st.session_state.f_raw = f_raw
         factor_options = [f.strip() for f in f_raw.split('\n') if f.strip()]
 
-# --- セキュアなAPI認証ロジック ---
+    st.divider()
+    
+    # --- セキュアなAPI認証ロジック（修正箇所） ---
     st.subheader("🔑 API認証")
     mode = st.radio("接続モード", ["Gemini", "Local"], label_visibility="collapsed")
     
     if mode == "Gemini":
-        # Secretsから取得を試みるが、取得できても表示はしない
+        # Secretsまたは環境変数から取得
         env_key = st.secrets.get("GOOGLE_API_KEY") or os.getenv("GOOGLE_API_KEY")
         
         if env_key:
-            # Secretsにキーがある場合は、入力欄を表示せず「設定済み」とする
+            # Secretsにある場合は、値を表示せず成功メッセージのみ出す
             st.success("✅ APIキー：Secretsより読込済")
             genai.configure(api_key=env_key)
             st.session_state.api_ready = True
         else:
-            # Secretsにない場合のみ、手動入力欄を出す（初期値は空）
+            # Secretsにない場合のみ、手動入力（パスワード形式）を表示
             user_key = st.text_input("Google API Key を入力", type="password")
             if user_key:
                 genai.configure(api_key=user_key)
@@ -111,11 +112,9 @@ with st.sidebar:
     else:
         st.session_state.api_ready = True
 
-# --- 5. メインエリア ヘッダー（ロゴとタイトル） ---
-# 画像がない場合に備え、絵文字とテキストでリッチに表示
+# --- 5. メインエリア ヘッダー ---
 head_col1, head_col2 = st.columns([0.1, 0.9])
 with head_col1:
-    # riskass.png があれば表示、なければシールド絵文字を表示
     if os.path.exists("riskass.png"):
         st.image("riskass.png", width=70)
     else:
