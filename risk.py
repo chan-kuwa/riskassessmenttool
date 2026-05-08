@@ -126,7 +126,7 @@ with head_col1:
     else:
         st.markdown("<h1 style='text-align: center;'>🛡️</h1>", unsafe_allow_html=True)
 with head_col2:
-    st.markdown("<h1 style='margin-bottom: 0;'>Risk Structure Analyzer Pro</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='margin-bottom: 0;'>RBA Risk Assessment Pro</h1>", unsafe_allow_html=True)
     st.markdown("<p style='color: gray; margin-top: 0;'>Clinical Research Risk-Based Approach Support Tool</p>", unsafe_allow_html=True)
 
 st.write("---")
