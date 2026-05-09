@@ -40,8 +40,8 @@ if "structured_risks" not in st.session_state:
         st.session_state.structured_risks = initial_config["risks"]
     else:
         st.session_state.structured_risks = [
-            {"ctq": "主要評価項目の信頼性", "events": "画像データの欠測\n検査手順の逸脱"},
-            {"ctq": "被験者の安全性確保", "events": "有害事象の報告遅延"}
+            {"ctq": "対象集団の適格整合性", "events": "不適格患者が誤って登録され、FASに含まれることで、対象集団における奏効割合が過小評価または過大評価されるリスク\n治験薬の初回投与で誤った用量が投与されるリスク"},
+            {"ctq": "重篤な有害事象（SAE）の即時報告・管理体制", "events": "SAE報告の遅延により、未知の毒性シグナルへの対応（試験全体の中止判断等）が遅れ、被験者の安全性等に影響を与えるリスク"}
         ]
 
 # --- 4. サイドバー（設定集約） ---
