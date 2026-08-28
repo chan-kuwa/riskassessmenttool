@@ -15,7 +15,9 @@ query_params = st.query_params
 initial_config = None
 if "data" in query_params:
     try:
-        initial_config = json.loads(base64.b64decode(query_params["data"]).decode('utf-8'))
+        encoded_data = query_params["data"]
+        padded_data = encoded_data + "=" * (-len(encoded_data) % 4)
+        initial_config = json.loads(base64.urlsafe_b64decode(padded_data).decode('utf-8'))
     except:
         st.error("配布データの復元に失敗しました。")
 
@@ -54,8 +56,9 @@ with st.sidebar:
             "risks": st.session_state.structured_risks,
             "factors": st.session_state.get("f_raw", "")
         }
-        b64 = base64.b64encode(json.dumps(current_config).encode('utf-8')).decode('utf-8')
-        st.code(f"https://your-app-url.streamlit.app/?data={b64}")
+        b64 = base64.urlsafe_b64encode(json.dumps(current_config).encode('utf-8')).decode('utf-8')
+        app_url = str(st.context.url).split("?")[0]
+        st.code(f"{app_url}?data={b64}")
         st.caption("このURLをコピーして評価者に共有してください。※APIキーは含まれません。")
 
     st.divider()
@@ -74,6 +77,13 @@ with st.sidebar:
             updated_risks.append({"ctq": c_val, "events": e_val})
             if st.button(f"🗑️ 削除", key=f"del_g_{i}"):
                 st.session_state.structured_risks.pop(i)
+                # 行番号をキーにした評価値が、削除後に別リスクへ移るのを防ぐ
+                for state_key in list(st.session_state.keys()):
+                    if (
+                        state_key.rsplit("_", 1)[-1].isdigit()
+                        and state_key.startswith(("s_", "o_", "d_", "f_"))
+                    ):
+                        del st.session_state[state_key]
                 st.rerun()
         
         if st.button("➕ CTQを追加"):
@@ -82,7 +92,9 @@ with st.sidebar:
         st.session_state.structured_risks = updated_risks
 
     with st.expander("🔍 3. 要因マスター", expanded=False):
-        f_raw = st.text_area("要因", value="P: 患者要因\nS: 手順書要因\nH: システム要員\nE: リソース不足や時間等の環境要因\nL:対応者自身が要因（失念など）\nL: 治験関係者以外（分担医師・協力者以外の医療関係者や患者家族）要因", height=100)
+        default_factors = "P: 患者要因\nS: 手順書要因\nH: システム要因\nE: リソース不足や時間等の環境要因\nL（本人）: 対応者自身が要因（失念など）\nL（周囲）: 治験関係者以外（分担医師・協力者以外の医療関係者や患者家族）要因"
+        initial_factors = initial_config["factors"] if initial_config and "factors" in initial_config else default_factors
+        f_raw = st.text_area("要因", value=initial_factors, height=100)
         st.session_state.f_raw = f_raw
         factor_options = [f.strip() for f in f_raw.split('\n') if f.strip()]
 
@@ -91,6 +103,7 @@ with st.sidebar:
     st.subheader("🔑 API認証")
     mode = st.radio("接続モード", ["Gemini", "Local"], label_visibility="collapsed")
     
+    st.session_state.api_ready = False
     if mode == "Gemini":
         env_key = st.secrets.get("GOOGLE_API_KEY") or os.getenv("GOOGLE_API_KEY")
         if env_key:
@@ -103,7 +116,7 @@ with st.sidebar:
                 genai.configure(api_key=user_key)
                 st.session_state.api_ready = True
     else:
-        st.session_state.api_ready = True
+        st.warning("Local接続は未設定です。現在はGeminiモードのみ解析できます。")
 
 # --- 5. メインエリア ヘッダー ---
 head_col1, head_col2 = st.columns([0.1, 0.9])
@@ -143,9 +156,12 @@ with col_left:
 with col_right:
     st.subheader("📝 評価スコアリング")
     role_opts = list(role_dict.keys())
+    sel_role = None
     if role_opts:
         sel_role = st.selectbox("あなたの職種を選択", role_opts)
         st.info(f"**担当役割:** {role_dict[sel_role]}")
+    else:
+        st.warning("評価を実行するには、サイドバーで職種・役割を1件以上登録してください。")
         
     for i, item in enumerate(eval_items):
         with st.expander(f"No.{i+1} | {item['ctq']} : {item['risk']}", expanded=(i==0)):
@@ -155,7 +171,7 @@ with col_right:
                         try:
                             # モデル指定
                             model = genai.GenerativeModel("models/gemini-3-flash-preview")
-                            prompt = f"リスク「{item['risk']}」に関連するプロトコルの規定（セクション番号、ページ、原文）を抽出せよ。ただし制約として推論や一般論を含めず原文に忠実な記述とすること。\n\nPROTOCOL:\n{st.session_state.protocol_text[:12000]}"
+                            prompt = f"リスク「{item['risk']}」に関連するプロトコルの規定（セクション番号、ページ、原文）を抽出せよ。ただし制約として推論や一般論を含めず原文に忠実な記述とすること。\n\nPROTOCOL:\n{st.session_state.protocol_text}"
                             res = model.generate_content(prompt).text
                             st.session_state.ai_highlights[f"{item['ctq']}_{item['risk']}"] = res
                             st.rerun()
@@ -171,7 +187,7 @@ with col_right:
             st.multiselect("リスク要因 (Factors)", factor_options, key=f"f_{i}")
 
     st.divider()
-    if st.button("📊 評価完了・CSV生成"):
+    if st.button("📊 評価完了・CSV生成", disabled=not role_opts):
         final_data = []
         for j, it in enumerate(eval_items):
             final_data.append({
